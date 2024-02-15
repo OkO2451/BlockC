@@ -8,48 +8,54 @@ import (
 )
 
 type CLI struct {
-	bc *blockchain
+	Bc *blockchain
 }
 
 func (cli *CLI) printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  addblock -data BLOCK_DATA - add a block to the blockchain")
 	fmt.Println("  printchain - print all the blocks of the blockchain")
-	fmt.Println("  createblockchain -address ADDRESS - create a blockchain and send genesis block reward to ADDRESS")
-	fmt.Println("  getbalance -address ADDRESS - get balance of ADDRESS")
-	fmt.Println("  send -from FROM -to TO -amount AMOUNT - send AMOUNT of coins from FROM address to TO")
-	fmt.Println("  createwallet - creates a new wallet")
-	fmt.Println("  listaddresses - Lists the addresses in our wallet file")
-	fmt.Println("  reindexutxo - Rebuilds the UTXO set")
-	fmt.Println("  printutxo - Prints the UTXO set")
-	fmt.Println("  startnode -miner ADDRESS - Start a node with ID specified in NODE_ID env. var. -miner enables mining")
-	fmt.Println("  reindexutxo - Rebuilds the UTXO set")
-	fmt.Println("  printutxo - Prints the UTXO set")
-	fmt.Println("  startnode -miner ADDRESS - Start a node with ID specified in NODE_ID env. var. -miner enables mining")
 }
 
 func (cli *CLI) Run() {
-	cli.validateArgs()
+
+	
 
 	addBlockCmd := flag.NewFlagSet("addblock", flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
 
 	addBlockData := addBlockCmd.String("data", "", "Block data")
 
+
+	fmt.Printf("Your command is: %v with flag: %v\n", os.Args[1], os.Args[2])
+
+	fmt.Printf("We are processing the command line\n")
+	if len(os.Args) < 2 {
+		cli.printUsage()
+		fmt.Printf("You have not entered a command\n")
+		os.Exit(1)
+	} else {
+		fmt.Printf("You have entered a command\n")
+	}
+
+	fmt.Printf("Your command is: %v\n", os.Args[1])
+
 	switch os.Args[1] {
 	case "addblock":
+		fmt.Printf("You have entered addblock\n")
 		addBlockCmd.Parse(os.Args[2:])
 	case "printchain":
+		fmt.Printf("You have entered printchain\n")
 		printChainCmd.Parse(os.Args[2:])
 	default:
 		cli.printUsage()
-		os.Exit(1)
+		
 	}
 
 	if addBlockCmd.Parsed() {
 		if *addBlockData == "" {
 			addBlockCmd.Usage()
-			os.Exit(1)
+			
 		}
 		cli.addBlock(*addBlockData)
 	}
@@ -60,8 +66,8 @@ func (cli *CLI) Run() {
 
 }
 
-func NewCLI(bc *blockchain) *CLI {
-	return &CLI{bc}
+func NewCLI(Bc *blockchain) *CLI {
+	return &CLI{Bc}
 }
 
 func (cli *CLI) validateArgs() {
@@ -72,12 +78,13 @@ func (cli *CLI) validateArgs() {
 }
 
 func (cli *CLI) addBlock(data string) {
-	cli.bc.AddBlock(data)
+	fmt.Println("In AddBlock function CLI")
+	cli.Bc.AddBlock(data)
 	fmt.Println("Block added")
 }
 
 func (cli *CLI) printChain() {
-	bci := cli.bc.Iterator()
+	bci := cli.Bc.Iterator()
 
 	for {
 		block := bci.Next()

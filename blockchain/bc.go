@@ -11,25 +11,25 @@ const dbFile = "bc.db"
 const blocksBucket = "bChains"
 
 type blockchain struct {
-	tip []byte
+	Tip []byte
 
-	db *bolt.DB
+	Db *bolt.DB
 }
 
 // iterator pattern
-// because we are using bolt db, we need to iterate through the blocks
+// because we are using bolt Db, we need to iterate through the blocks
 type bcIterator struct {
 	currentHash []byte
-	db          *bolt.DB
+	Db          *bolt.DB
 }
 
 // create a new blockchain
 func NewBlockchain() *blockchain {
 
-	var tip []byte
-	db, _ := bolt.Open(dbFile, 0600, nil)
+	var Tip []byte
+	Db, _ := bolt.Open(dbFile, 0600, nil)
 
-	db.Update(func(tx *bolt.Tx) error {
+	Db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 
 		if b == nil {
@@ -37,17 +37,17 @@ func NewBlockchain() *blockchain {
 			b, _ := tx.CreateBucket([]byte(blocksBucket))
 			b.Put(genesis.Hash, genesis.Serialize())
 			b.Put([]byte("l"), genesis.Hash)
-			tip = genesis.Hash
+			Tip = genesis.Hash
 		} else {
-			tip = b.Get([]byte("l"))
+			Tip = b.Get([]byte("l"))
 		}
 
 		return nil
 	})
 
 	bc := blockchain{
-		tip: tip,
-		db:  db,
+		Tip: Tip,
+		Db:  Db,
 	}
 
 	return &bc
@@ -62,7 +62,7 @@ func (bc *blockchain) AddBlock(data string) {
 
 	fmt.Printf("LastHash: %v\n", lastHash)
 
-	err := bc.db.View(func(tx *bolt.Tx) error {
+	err := bc.Db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		lastHash = b.Get([]byte("l"))
 		fmt.Printf("LastHash: %v\n", lastHash)
@@ -74,11 +74,11 @@ func (bc *blockchain) AddBlock(data string) {
 
 	newBlock := NewBlock(data, lastHash)
 
-	err = bc.db.Update(func(tx *bolt.Tx) error {
+	err = bc.Db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		b.Put(newBlock.Hash, newBlock.Serialize())
 		err = b.Put([]byte("l"), newBlock.Hash)
-		bc.tip = newBlock.Hash
+		bc.Tip = newBlock.Hash
 
 		return nil
 	})
@@ -108,8 +108,8 @@ func (bc *blockchain) IsValid() bool {
 // create a new iterator
 func (bc *blockchain) Iterator() *bcIterator {
 	bci := &bcIterator{
-		currentHash: bc.tip,
-		db:          bc.db,
+		currentHash: bc.Tip,
+		Db:          bc.Db,
 	}
 
 	return bci
@@ -117,7 +117,7 @@ func (bc *blockchain) Iterator() *bcIterator {
 func (i *bcIterator) Next() *Block {
 	var block *Block
 
-	err := i.db.View(func(tx *bolt.Tx) error {
+	err := i.Db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		encodedBlock := b.Get(i.currentHash)
 
