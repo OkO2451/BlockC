@@ -19,13 +19,10 @@ func (cli *CLI) printUsage() {
 
 func (cli *CLI) Run() {
 
-	
-
 	addBlockCmd := flag.NewFlagSet("addblock", flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
 
 	addBlockData := addBlockCmd.String("data", "", "Block data")
-
 
 	fmt.Printf("Your command is: %v with flag: %v\n", os.Args[1], os.Args[2])
 
@@ -45,22 +42,20 @@ func (cli *CLI) Run() {
 		fmt.Printf("You have entered addblock\n")
 		addBlockCmd.Parse(os.Args[2:])
 		if addBlockCmd.Parsed() {
-        if *addBlockData == "" {
-            fmt.Println("addblock requires a -data flag")
-        } else {
-            fmt.Printf("Block data: %s\n", *addBlockData)
-            cli.addBlock(*addBlockData)
-        }
-    }
+			if *addBlockData == "" {
+				fmt.Println("addblock requires a -data flag")
+			} else {
+				fmt.Printf("Block data: %s\n", *addBlockData)
+				cli.addBlock(*addBlockData)
+			}
+		}
 	case "printchain":
 		fmt.Printf("You have entered printchain\n")
 		printChainCmd.Parse(os.Args[2:])
 	default:
 		cli.printUsage()
-		
-	}
 
-	
+	}
 
 	if printChainCmd.Parsed() {
 		cli.printChain()
@@ -70,13 +65,6 @@ func (cli *CLI) Run() {
 
 func NewCLI(Bc *blockchain) *CLI {
 	return &CLI{Bc}
-}
-
-func (cli *CLI) validateArgs() {
-	if len(os.Args) < 2 {
-		cli.printUsage()
-		os.Exit(1)
-	}
 }
 
 func (cli *CLI) addBlock(data string) {

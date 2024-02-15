@@ -49,29 +49,27 @@ func NewPrivateKeyFromSeed(seed []byte) PrivateKey {
 	}
 }
 
-func NewPrivateKeyFromBString(s string) (PrivateKey) {
+func NewPrivateKeyFromBString(s string) PrivateKey {
 	b, err := hex.DecodeString(s)
 	if err != nil {
 		panic(err)
 	}
 
-	
-
 	return NewPrivateKeyFromSeed(b)
 }
 
 func GeneratePrivateKey() PrivateKey {
-    seed := make([]byte, SeedLength)
-    _, err := io.ReadFull(rand.Reader, seed)
-    // if there is an error, panic because if the reader is not working,
-    // the program is not working
-    if err != nil {
-        panic(err)
-    }
+	seed := make([]byte, SeedLength)
+	_, err := io.ReadFull(rand.Reader, seed)
+	// if there is an error, panic because if the reader is not working,
+	// the program is not working
+	if err != nil {
+		panic(err)
+	}
 
-    return PrivateKey{
-        Key: ed25519.NewKeyFromSeed(seed),
-    }
+	return PrivateKey{
+		Key: ed25519.NewKeyFromSeed(seed),
+	}
 }
 
 func (p *PrivateKey) Bytes() []byte {
