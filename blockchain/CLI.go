@@ -44,6 +44,14 @@ func (cli *CLI) Run() {
 	case "addblock":
 		fmt.Printf("You have entered addblock\n")
 		addBlockCmd.Parse(os.Args[2:])
+		if addBlockCmd.Parsed() {
+        if *addBlockData == "" {
+            fmt.Println("addblock requires a -data flag")
+        } else {
+            fmt.Printf("Block data: %s\n", *addBlockData)
+            cli.addBlock(*addBlockData)
+        }
+    }
 	case "printchain":
 		fmt.Printf("You have entered printchain\n")
 		printChainCmd.Parse(os.Args[2:])
@@ -52,13 +60,7 @@ func (cli *CLI) Run() {
 		
 	}
 
-	if addBlockCmd.Parsed() {
-		if *addBlockData == "" {
-			addBlockCmd.Usage()
-			
-		}
-		cli.addBlock(*addBlockData)
-	}
+	
 
 	if printChainCmd.Parsed() {
 		cli.printChain()
