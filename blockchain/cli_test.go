@@ -1,11 +1,11 @@
-package main
+package blockchain
 
 import (
-	"github.com/OkO2451/BlockC/blockchain"
-	
+	"testing"
 )
 
-func main() {
+func TestPrintUsage(t *testing.T) {
+
 	bc := NewBlockchain()
 	defer bc.db.Close()
 

@@ -1,0 +1,24 @@
+.
+├── BlockC
+├── Makefile
+├── README.md
+├── blockchain
+│   ├── CLI.go
+│   ├── POW.go
+│   ├── bc.db
+│   ├── bc.go
+│   ├── bc_test.go
+│   ├── block.go
+│   ├── block_test.go
+│   ├── cli_test.go
+│   └── test.txt
+├── config.txt
+├── cryptoKeys
+│   ├── key_test.go
+│   └── keys.go
+├── go.mod
+├── go.sum
+└── main
+    └── main.go
+
+3 directories, 18 files

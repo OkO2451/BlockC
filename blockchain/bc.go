@@ -3,7 +3,6 @@ package blockchain
 import (
 	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/boltdb/bolt"
 )
@@ -12,9 +11,9 @@ const dbFile = "bc.db"
 const blocksBucket = "bChains"
 
 type blockchain struct {
-	tip    []byte
-	blocks []*Block
-	db     *bolt.DB
+	tip []byte
+
+	db *bolt.DB
 }
 
 // iterator pattern
@@ -88,17 +87,22 @@ func (bc *blockchain) AddBlock(data string) {
 
 // very expensive operation to check if the blockchain is valid
 func (bc *blockchain) IsValid() bool {
-	valFlag := true
+	it := bc.Iterator()
 
-	for _, block := range bc.blocks {
+	for {
+		block := it.Next()
 
-		pow := NewProofOfWork(block)
-		valFlag = valFlag && pow.Validate()
-		fmt.Printf("PoW: %s\n", strconv.FormatBool(valFlag))
-		fmt.Println()
+		if block == nil {
+			break
+		}
+
+		if !block.IsValid() {
+			return false
+		}
 
 	}
-	return valFlag
+
+	return true
 }
 
 // create a new iterator
@@ -111,44 +115,44 @@ func (bc *blockchain) Iterator() *bcIterator {
 	return bci
 }
 func (i *bcIterator) Next() *Block {
-    var block *Block
+	var block *Block
 
-    err := i.db.View(func(tx *bolt.Tx) error {
-        b := tx.Bucket([]byte(blocksBucket))
-        encodedBlock := b.Get(i.currentHash)
+	err := i.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+		encodedBlock := b.Get(i.currentHash)
 
-        if encodedBlock == nil {
-            return nil
-        }
+		if encodedBlock == nil {
+			return nil
+		}
 
-        block = DeserializeBlock(encodedBlock)
+		block = DeserializeBlock(encodedBlock)
 
-        return nil
-    })
-    if err != nil {
-        log.Panic(err)
-    }
+		return nil
+	})
+	if err != nil {
+		log.Panic(err)
+	}
 
-    if block != nil {
-        i.currentHash = block.PrevBlockHash
-    }
+	if block != nil {
+		i.currentHash = block.PrevBlockHash
+	}
 
-    return block
+	return block
 }
 func PrintAllBlocks(bc *blockchain) {
-    // Create a new blockchain iterator
-    it := bc.Iterator()
+	// Create a new blockchain iterator
+	it := bc.Iterator()
 
-    // Iterate over all blocks in the blockchain
-    for {
-        block := it.Next()
+	// Iterate over all blocks in the blockchain
+	for {
+		block := it.Next()
 
-        // Break if there are no more blocks in the blockchain
-        if block == nil {
-            break
-        }
+		// Break if there are no more blocks in the blockchain
+		if block == nil {
+			break
+		}
 
-        // Print the block's data
-        fmt.Println(string(block.Data))
-    }
+		// Print the block's data
+		fmt.Println(string(block.Data))
+	}
 }

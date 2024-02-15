@@ -75,6 +75,11 @@ func DeserializeBlock(d []byte) *Block {
 	return &block
 }
 
+func (b *Block) IsValid() bool {
+	pow := NewProofOfWork(b)
+	return pow.Validate()
+}
+
 /*
 func (b *Block) Serialize() []byte {
 	var result []byte
