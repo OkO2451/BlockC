@@ -5,12 +5,16 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
+
+	
 )
 
 type Transaction struct {
 	ID   []byte
 	Vin  []TXInput
 	Vout []TXOutput
+
+	Value int
 }
 
 const subsidy = 1
@@ -26,7 +30,13 @@ func NewCoinbaseTX(to, data string) *Transaction {
 		ScriptSig: data,
 	}
 	txout := NewTXOutput(subsidy, to)
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}}
+	tx := Transaction{
+		ID:   nil,
+		Vin:  []TXInput{txin},
+		Vout: []TXOutput{*txout},
+
+		Value: subsidy,
+	}
 	tx.SetID()
 
 	return &tx
@@ -54,3 +64,8 @@ func (tx *Transaction) Serialize() []byte {
 
 	return encoded.Bytes()
 }
+
+func (tx *Transaction) IsCoinbase() bool {
+	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
+}
+

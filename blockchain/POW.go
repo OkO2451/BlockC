@@ -51,6 +51,7 @@ func (p *pow) prepareData(nonce int) []byte {
 		[][]byte{
 			p.block.PrevBlockHash,
 			p.block.Data,
+			p.block.HashTransactions(), // added for transactions.go
 			[]byte(strconv.FormatInt(p.block.Timestamp, 10)),
 			[]byte(strconv.FormatInt(int64(nonce), 10)),
 			[]byte(strconv.FormatInt(int64(p.block.TargetBits), 10)),
@@ -108,3 +109,4 @@ func (p *pow) Validate() bool {
 
 	return isValid
 }
+	

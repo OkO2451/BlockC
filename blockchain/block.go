@@ -2,11 +2,14 @@ package blockchain
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/OkO2451/BlockC/transactions"
 )
 
 type Block struct {
@@ -16,6 +19,7 @@ type Block struct {
 	Data          []byte
 	Nonce         int // for proof of work algorithm
 	TargetBits    int
+	Transactions  []*transactions.Transaction
 }
 
 func (b *Block) String() string {
@@ -28,10 +32,17 @@ func (b *Block) String() string {
 }
 
 // create a new block
-func NewBlock(data string, prevBlockHash []byte) *Block {
+func NewBlock(data string, prevBlockHash []byte, Tr []*transactions.Transaction) *Block {
 
 	fmt.Printf("In NewBlock data is: %v\n", data)
-	block := &Block{Timestamp: time.Now().Unix(), PrevBlockHash: prevBlockHash, Hash: []byte{}, Data: []byte(data), Nonce: 0}
+	block := &Block{
+		Timestamp:     time.Now().Unix(),
+		PrevBlockHash: prevBlockHash,
+		Hash:          []byte{},
+		Data:          []byte(data),
+		Nonce:         0,
+		Transactions:  Tr,
+	}
 	p := NewProofOfWork(block)
 	fmt.Printf("After creating NewProofOfWork\n")
 
@@ -46,8 +57,8 @@ func NewBlock(data string, prevBlockHash []byte) *Block {
 }
 
 // create a new genesis block
-func NewGenesisBlock() *Block {
-	return NewBlock("Genesis Block", []byte{})
+func NewGenesisBlock(coinbase *transactions.Transaction) *Block {
+	return NewBlock("Genesis Block", []byte{}, []*transactions.Transaction{coinbase})
 }
 
 func (b *Block) Serialize() []byte {
@@ -78,6 +89,23 @@ func DeserializeBlock(d []byte) *Block {
 func (b *Block) IsValid() bool {
 	pow := NewProofOfWork(b)
 	return pow.Validate()
+}
+
+// hashTransactions
+func (b *Block) HashTransactions() []byte {
+	var txHashes [][]byte
+	var txHash [32]byte
+
+	for _, tx := range b.Transactions {
+		txHashes = append(txHashes, tx.Serialize())
+	}
+	txHash = sha256.Sum256(bytes.Join(txHashes, []byte{}))
+
+	return txHash[:]
+}
+
+func (b *Block) getTransactions() []*transactions.Transaction {
+	return b.Transactions
 }
 
 /*

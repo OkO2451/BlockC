@@ -1,16 +1,19 @@
 package blockchain
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 
+	"github.com/OkO2451/BlockC/transactions"
 	"github.com/boltdb/bolt"
 )
 
 const dbFile = "bc.db"
 const blocksBucket = "bChains"
+const genesisCoinbaseData = "banks are the modern day robber baron"
 
-type blockchain struct {
+type bChain struct {
 	Tip []byte
 
 	Db *bolt.DB
@@ -23,8 +26,8 @@ type bcIterator struct {
 	Db          *bolt.DB
 }
 
-// create a new blockchain
-func NewBlockchain() *blockchain {
+// create a new bChain
+func NewBlockchain(address string) *bChain {
 
 	var Tip []byte
 	Db, _ := bolt.Open(dbFile, 0600, nil)
@@ -33,7 +36,8 @@ func NewBlockchain() *blockchain {
 		b := tx.Bucket([]byte(blocksBucket))
 
 		if b == nil {
-			genesis := NewGenesisBlock()
+			coin := transactions.NewCoinbaseTX(address, genesisCoinbaseData)
+			genesis := NewGenesisBlock(coin)
 			b, _ := tx.CreateBucket([]byte(blocksBucket))
 			b.Put(genesis.Hash, genesis.Serialize())
 			b.Put([]byte("l"), genesis.Hash)
@@ -45,7 +49,7 @@ func NewBlockchain() *blockchain {
 		return nil
 	})
 
-	bc := blockchain{
+	bc := bChain{
 		Tip: Tip,
 		Db:  Db,
 	}
@@ -53,40 +57,46 @@ func NewBlockchain() *blockchain {
 	return &bc
 }
 
-// add a new block to the blockchain
-func (bc *blockchain) AddBlock(data string) {
-
+// add a new block to the bChain
+func (bc *bChain) AddBlock(data string, tr []*transactions.Transaction) {
 	fmt.Println("In AddBlock")
 
 	var lastHash []byte
 
-	fmt.Printf("LastHash: %v\n", lastHash)
-
 	err := bc.Db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		lastHash = b.Get([]byte("l"))
-		fmt.Printf("LastHash: %v\n", lastHash)
 		return nil
 	})
+
 	if err != nil {
-		fmt.Println(err)
+		log.Panic(err)
 	}
 
-	newBlock := NewBlock(data, lastHash)
+	newBlock := NewBlock(data, lastHash, tr)
 
 	err = bc.Db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
-		b.Put(newBlock.Hash, newBlock.Serialize())
+		err := b.Put(newBlock.Hash, newBlock.Serialize())
+		if err != nil {
+			return err
+		}
 		err = b.Put([]byte("l"), newBlock.Hash)
+		if err != nil {
+			return err
+		}
 		bc.Tip = newBlock.Hash
 
 		return nil
 	})
 
+	if err != nil {
+		log.Panic(err)
+	}
 }
 
-// very expensive operation to check if the blockchain is valid
-func (bc *blockchain) IsValid() bool {
+// very expensive operation to check if the bChain is valid
+func (bc *bChain) IsValid() bool {
 	it := bc.Iterator()
 
 	for {
@@ -106,7 +116,7 @@ func (bc *blockchain) IsValid() bool {
 }
 
 // create a new iterator
-func (bc *blockchain) Iterator() *bcIterator {
+func (bc *bChain) Iterator() *bcIterator {
 	bci := &bcIterator{
 		currentHash: bc.Tip,
 		Db:          bc.Db,
@@ -139,15 +149,15 @@ func (i *bcIterator) Next() *Block {
 
 	return block
 }
-func PrintAllBlocks(bc *blockchain) {
-	// Create a new blockchain iterator
+func PrintAllBlocks(bc *bChain) {
+	// Create a new bChain iterator
 	it := bc.Iterator()
 
-	// Iterate over all blocks in the blockchain
+	// Iterate over all blocks in the bChain
 	for {
 		block := it.Next()
 
-		// Break if there are no more blocks in the blockchain
+		// Break if there are no more blocks in the bChain
 		if block == nil {
 			break
 		}
@@ -155,4 +165,142 @@ func PrintAllBlocks(bc *blockchain) {
 		// Print the block's data
 		fmt.Println(string(block.Data))
 	}
+}
+
+// add a private key to the bChain
+func (bc *bChain) AddPrivateKey(privateKey string) {
+	err := bc.Db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+		err := b.Put([]byte("privateKey"), []byte(privateKey))
+		return err
+	})
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
+func (bc *bChain) FindUnspentTransactions(address string) []transactions.Transaction {
+	var unspentTXs []transactions.Transaction
+	spentTXOs := make(map[string][]int)
+	bci := bc.Iterator()
+
+	for {
+		block := bci.Next()
+
+		for _, tx := range block.Transactions {
+			txID := hex.EncodeToString(tx.ID)
+
+		Outputs:
+			for outIdx, out := range tx.Vout {
+				// Was the output spent?
+				if spentTXOs[txID] != nil {
+					for _, spentOut := range spentTXOs[txID] {
+						if spentOut == outIdx {
+							continue Outputs
+						}
+					}
+				}
+
+				if out.CanBeUnlockedWith(address) {
+					unspentTXs = append(unspentTXs, *tx)
+				}
+			}
+
+			if !tx.IsCoinbase() {
+
+				for _, in := range tx.Vin {
+					if in.CanUnlockOutputWith(address) {
+						inTxID := hex.EncodeToString(in.Txid)
+						spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Vout)
+					}
+				}
+			}
+
+		}
+
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+
+	return unspentTXs
+}
+
+func (bc *bChain) FindUTXO(address string) []transactions.TXOutput {
+	var UTXOs []transactions.TXOutput
+	unspentTransactions := bc.FindUnspentTransactions(address)
+
+	for _, tx := range unspentTransactions {
+		for _, out := range tx.Vout {
+			if out.CanBeUnlockedWith(address) {
+				UTXOs = append(UTXOs, out)
+			}
+		}
+	}
+
+	return UTXOs
+}
+
+func NewUTXOTransaction(from, to string, amount int, bc *bChain) *transactions.Transaction {
+	var inputs []transactions.TXInput
+	var outputs []transactions.TXOutput
+
+	acc, validOutputs := bc.FindSpendableOutputs(from, amount)
+
+	if acc < amount {
+		fmt.Println("Error: Not enough funds")
+		return nil
+	}
+
+	for txid, outs := range validOutputs {
+		txID := []byte(txid)
+		for _, out := range outs {
+			input := transactions.TXInput{
+				Txid:      txID,
+				Vout:      out,
+				ScriptSig: from,
+			}
+			inputs = append(inputs, input)
+		}
+	}
+
+	outputs = append(outputs, *transactions.NewTXOutput(amount, to))
+	if acc > amount {
+		outputs = append(outputs, *transactions.NewTXOutput(acc-amount, from))
+	}
+
+	tx := transactions.Transaction{
+		ID:   nil,
+		Vin:  inputs,
+		Vout: outputs,
+
+		Value: amount,
+	}
+	tx.SetID()
+
+	return &tx
+}
+
+func (bc *bChain) FindSpendableOutputs(address string, amount int) (int, map[string][]int) {
+	unspentOutputs := make(map[string][]int)
+	unspentTXs := bc.FindUnspentTransactions(address)
+	accumulated := 0
+
+Work:
+	for _, tx := range unspentTXs {
+		txID := hex.EncodeToString(tx.ID)
+
+		for outIdx, out := range tx.Vout {
+			if out.CanBeUnlockedWith(address) && accumulated < amount {
+				accumulated += out.Value
+				unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
+
+				if accumulated >= amount {
+					break Work
+				}
+			}
+		}
+	}
+
+	return accumulated, unspentOutputs
 }
