@@ -226,6 +226,9 @@ func (bc *bChain) FindUnspentTransactions(address string) []transactions.Transac
 	return unspentTXs
 }
 
+
+ 
+
 func (bc *bChain) FindUTXO(address string) []transactions.TXOutput {
 	var UTXOs []transactions.TXOutput
 	unspentTransactions := bc.FindUnspentTransactions(address)
@@ -241,7 +244,7 @@ func (bc *bChain) FindUTXO(address string) []transactions.TXOutput {
 	return UTXOs
 }
 
-func NewUTXOTransaction(from, to string, amount int, bc *bChain) *transactions.Transaction {
+func  	NewUTXOTransaction(from, to string, amount int, bc *bChain) *transactions.Transaction {
 	var inputs []transactions.TXInput
 	var outputs []transactions.TXOutput
 

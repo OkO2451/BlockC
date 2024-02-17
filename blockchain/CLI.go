@@ -17,22 +17,22 @@ func (cli *CLI) printUsage() {
 	fmt.Println("Usage:")
 
 	fmt.Println("  addblock -data BLOCK_DATA - add a block to the bChain")
-    fmt.Println("  addblock example: addblock -data \"Send 1 BTC to Ivan\"")
+	fmt.Println("  addblock example: addblock -data \"Send 1 BTC to Ivan\"")
 
 	fmt.Println("  printchain - print all the blocks of the bChain")
-    fmt.Println("  printchain example: printchain")
+	fmt.Println("  printchain example: printchain")
 
-    fmt.Println("  getbalance -address ADDRESS - get balance for ADDRESS")
-    fmt.Println("  getbalance example: getbalance -address Ivan")
+	fmt.Println("  getbalance -address ADDRESS - get balance for ADDRESS")
+	fmt.Println("  getbalance example: getbalance -address Ivan")
 }
 
 func (cli *CLI) Run() {
 	addBlockCmd := flag.NewFlagSet("addblock", flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
-    getBalanceCmd := flag.NewFlagSet("getbalance", flag.ExitOnError)
+	getBalanceCmd := flag.NewFlagSet("getbalance", flag.ExitOnError)
 
 	addBlockData := addBlockCmd.String("data", "", "Block data")
-    getBalanceData := getBalanceCmd.String("address", "", "The address to get balance for")
+	getBalanceData := getBalanceCmd.String("address", "", "The address to get balance for")
 
 	// transactions := getTransactions()
 	// should be implemented usig a private key
@@ -60,18 +60,18 @@ func (cli *CLI) Run() {
 			os.Exit(1)
 		}
 		cli.printChain()
-    case "getbalance":
-        err := getBalanceCmd.Parse(os.Args[2:])
-        if err != nil {
-            cli.printUsage()
-            os.Exit(1)
-        }
-        if *getBalanceData == "" {
-            fmt.Println("getbalance requires an -address flag")
-            os.Exit(1)
-        }
-        balance := cli.getBalance(*getBalanceData)
-        fmt.Printf("Balance of '%s': %d\n", *getBalanceData, balance)
+	case "getbalance":
+		err := getBalanceCmd.Parse(os.Args[2:])
+		if err != nil {
+			cli.printUsage()
+			os.Exit(1)
+		}
+		if *getBalanceData == "" {
+			fmt.Println("getbalance requires an -address flag")
+			os.Exit(1)
+		}
+		balance := cli.getBalance(*getBalanceData)
+		fmt.Printf("Balance of '%s': %d\n", *getBalanceData, balance)
 	default:
 		cli.printUsage()
 		os.Exit(1)
@@ -107,15 +107,30 @@ func (cli *CLI) printChain() {
 	}
 }
 
-func (cli *CLI) getBalance(address string) int {
-	balance := 0
-	UTXOs := cli.Bc.FindUTXO(address)
-
-    defer cli.Bc.Db.Close()
-
-	for _, out := range UTXOs {
-		balance += out.Value
+func (cli *CLI) send(from, to string, amount int) {
+	bc := NewBlockchain(from)
+	defer bc.Db.Close()
+	data := fmt.Sprintf("Send %d BTC to %s", amount, to)
+	tx := NewUTXOTransaction(from, to, amount, bc)
+	if tx != nil {
+		bc.AddBlock(data, []*transactions.Transaction{tx})
+		fmt.Println("Success!")
+	} else {
+		fmt.Println("Failed to send transaction")
 	}
+}
 
-	return balance
+
+func (cli *CLI) getBalance(address string) int {
+    bc := NewBlockchain(address)
+    defer bc.Db.Close()
+
+    balance := 0
+    UTXOs := bc.FindUTXO(address)
+
+    for _, out := range UTXOs {
+        balance += out.Value
+    }
+
+    return balance
 }
