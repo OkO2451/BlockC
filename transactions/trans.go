@@ -5,8 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
-
-	
+	"strings"
 )
 
 type Transaction struct {
@@ -69,4 +68,21 @@ func (tx *Transaction) IsCoinbase() bool {
 	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
 }
 
+func (tx *Transaction) String() string {
+	var lines []string
 
+	lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.ID))
+	for i, input := range tx.Vin {
+		lines = append(lines, fmt.Sprintf("     Input %d:", i))
+		lines = append(lines, fmt.Sprintf("       TXID:      %x", input.Txid))
+		lines = append(lines, fmt.Sprintf("       Out:       %d", input.Vout))
+		lines = append(lines, fmt.Sprintf("       ScriptSig: %s", input.ScriptSig))
+	}
+	for i, output := range tx.Vout {
+		lines = append(lines, fmt.Sprintf("     Output %d:", i))
+		lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
+		lines = append(lines, fmt.Sprintf("       ScriptPubKey: %s", output.ScriptPubKey))
+	}
+
+	return strings.Join(lines, "\n")
+}

@@ -22,9 +22,9 @@ func (p PublicKey) Public() *PublicKey {
 	}
 }
 
-// Address returns the Address corresponding to the PublicKey.
-func (p PublicKey) Address() *Address {
-	return &Address{
-		value: p.Key[:AddressLength],
-	}
+
+
+
+func (p *PublicKey) Hash() []byte {
+	return p.Key
 }
