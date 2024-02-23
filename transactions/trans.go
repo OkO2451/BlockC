@@ -3,11 +3,12 @@ package transactions
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"crypto/rand"
+	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/OkO2451/BlockC/cryptoKeys"
@@ -93,27 +94,36 @@ func (tx *Transaction) String() string {
 	return strings.Join(lines, "\n")
 }
 
-func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transaction) {
+// Sign signs each input of a Transaction
+func (tx *Transaction) Sign(privKey cryptoKeys.PrivateKey, prevTXs map[string]Transaction) {
+	// If the transaction is a coinbase transaction, it doesn't need to be signed
 	if tx.IsCoinbase() {
 		return
 	}
 
+	// Create a trimmed copy of the transaction to be used in the signature
 	txCopy := tx.TrimmedCopy()
 
+	// Loop through each input in the transaction
 	for inID, vin := range txCopy.Vin {
+		// Get the previous transaction that the input is referencing
 		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
+
+		// Reset the signature and public key of the input in the copied transaction
 		txCopy.Vin[inID].Signature = cryptoKeys.Signature{Value: nil}
 		txCopy.Vin[inID].SetPublicKey(prevTx.Vout[vin.Vout].PubKey)
+
+		// Hash the copied transaction to get its ID
 		txCopy.ID = txCopy.Hash()
+
+		// Reset the public key of the input in the copied transaction
 		txCopy.Vin[inID].PubKey = cryptoKeys.PublicKey{Key: nil}
 
-		r, s, err := ecdsa.Sign(rand.Reader, &privKey, txCopy.ID)
-		if err != nil {
-			panic(err)
-		}
-		signature := &cryptoKeys.Signature{Value: append(r.Bytes(), s.Bytes()...)}
+		// Sign the ID of the copied transaction using the private key
+		signature := ed25519.Sign(privKey.Key, txCopy.ID)
 
-		tx.Vin[inID].Signature = *signature
+		// Set the signature of the input in the original transaction
+		tx.Vin[inID].Signature = cryptoKeys.Signature{Value: signature}
 	}
 }
 
@@ -144,4 +154,39 @@ func (tx *Transaction) Hash() []byte {
 	txCopy.ID = []byte{}
 	hash := sha256.Sum256(txCopy.Serialize())
 	return hash[:]
+}
+
+func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
+	if tx.IsCoinbase() {
+		return true
+	}
+
+	txCopy := tx.TrimmedCopy()
+	curve := cryptoKeys.Curve()
+	for inID, vin := range tx.Vin {
+		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
+		txCopy.Vin[inID].Signature = cryptoKeys.Signature{Value: nil}
+		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKey
+		txCopy.ID = txCopy.Hash()
+		txCopy.Vin[inID].PubKey = cryptoKeys.PublicKey{Key: nil}
+
+		r := big.Int{}
+		s := big.Int{}
+		sigLen := len(vin.Signature.Value)
+		r.SetBytes(vin.Signature.Value[:(sigLen / 2)])
+		s.SetBytes(vin.Signature.Value[(sigLen / 2):])
+
+		x := big.Int{}
+		y := big.Int{}
+		keyLen := len(vin.PubKey.Key)
+		x.SetBytes(vin.PubKey.Key[:(keyLen / 2)])
+		y.SetBytes(vin.PubKey.Key[(keyLen / 2):])
+
+		rawPubKey := ecdsa.PublicKey{Curve: curve, X: &x, Y: &y}
+		if !ecdsa.Verify(&rawPubKey, txCopy.ID, &r, &s) {
+			return false
+		}
+	}
+
+	return true
 }

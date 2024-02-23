@@ -1,6 +1,9 @@
 package cryptoKeys
 
-import "crypto/ed25519"
+import (
+	"crypto/ed25519"
+	"crypto/elliptic"
+)
 
 type Signature struct {
 	// 64 bytes long
@@ -17,4 +20,6 @@ func (s *Signature) Verify(data []byte, pub PublicKey) bool {
 	return ed25519.Verify(pub.Key, data, s.Value)
 }
 
-
+func Curve() elliptic.Curve {
+	return elliptic.P256()
+}

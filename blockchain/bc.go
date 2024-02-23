@@ -1,10 +1,12 @@
 package blockchain
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"log"
 
+	"github.com/OkO2451/BlockC/cryptoKeys"
 	"github.com/OkO2451/BlockC/transactions"
 	"github.com/boltdb/bolt"
 )
@@ -226,9 +228,6 @@ func (bc *bChain) FindUnspentTransactions(address string) []transactions.Transac
 	return unspentTXs
 }
 
-
- 
-
 func (bc *bChain) FindUTXO(address string) []transactions.TXOutput {
 	var UTXOs []transactions.TXOutput
 	unspentTransactions := bc.FindUnspentTransactions(address)
@@ -244,7 +243,7 @@ func (bc *bChain) FindUTXO(address string) []transactions.TXOutput {
 	return UTXOs
 }
 
-func  	NewUTXOTransaction(from, to string, amount int, bc *bChain) *transactions.Transaction {
+func NewUTXOTransaction(from, to string, amount int, bc *bChain) *transactions.Transaction {
 	var inputs []transactions.TXInput
 	var outputs []transactions.TXOutput
 
@@ -306,4 +305,38 @@ Work:
 	}
 
 	return accumulated, unspentOutputs
+}
+
+func (bc *bChain) FindTransaction(ID []byte) (transactions.Transaction, error) {
+	bci := bc.Iterator()
+
+	for {
+		block := bci.Next()
+
+		for _, tx := range block.Transactions {
+			if bytes.Equal(tx.ID, ID) {
+				return *tx, nil
+			}
+		}
+
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+
+	return transactions.Transaction{}, nil
+}
+
+func (bc *bChain) SignTransaction(tx *transactions.Transaction, privKey cryptoKeys.PrivateKey) {
+	prevTXs := make(map[string]transactions.Transaction)
+
+	for _, vin := range tx.Vin {
+		prevTX, err := bc.FindTransaction(vin.Txid)
+		if err != nil {
+			log.Panic(err)
+		}
+		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
+	}
+
+	tx.Sign(privKey, prevTXs)
 }
