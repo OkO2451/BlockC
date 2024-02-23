@@ -340,3 +340,21 @@ func (bc *bChain) SignTransaction(tx *transactions.Transaction, privKey cryptoKe
 
 	tx.Sign(privKey, prevTXs)
 }
+
+func (bc *bChain) VerifyTransaction(tx *transactions.Transaction) bool {
+	if tx.IsCoinbase() {
+		return true
+	}
+
+	prevTXs := make(map[string]transactions.Transaction)
+
+	for _, vin := range tx.Vin {
+		prevTX, err := bc.FindTransaction(vin.Txid)
+		if err != nil {
+			log.Panic(err)
+		}
+		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
+	}
+
+	return tx.Verify(prevTXs)
+}
