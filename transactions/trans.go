@@ -2,18 +2,24 @@ package transactions
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
+	"encoding/hex"
 	"fmt"
 	"strings"
+
+	"github.com/OkO2451/BlockC/cryptoKeys"
 )
 
 type Transaction struct {
-	ID   []byte
-	Vin  []TXInput
-	Vout []TXOutput
-
-	Value int
+	ID        []byte
+	Vin       []TXInput
+	Vout      []TXOutput
+	Signature *cryptoKeys.Signature
+	PubKey    *cryptoKeys.PublicKey
+	Value     int
 }
 
 const subsidy = 1
@@ -85,4 +91,57 @@ func (tx *Transaction) String() string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transaction) {
+	if tx.IsCoinbase() {
+		return
+	}
+
+	txCopy := tx.TrimmedCopy()
+
+	for inID, vin := range txCopy.Vin {
+		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
+		txCopy.Vin[inID].Signature = cryptoKeys.Signature{Value: nil}
+		txCopy.Vin[inID].SetPublicKey(prevTx.Vout[vin.Vout].PubKey)
+		txCopy.ID = txCopy.Hash()
+		txCopy.Vin[inID].PubKey = cryptoKeys.PublicKey{Key: nil}
+
+		r, s, err := ecdsa.Sign(rand.Reader, &privKey, txCopy.ID)
+		if err != nil {
+			panic(err)
+		}
+		signature := &cryptoKeys.Signature{Value: append(r.Bytes(), s.Bytes()...)}
+
+		tx.Vin[inID].Signature = *signature
+	}
+}
+
+func (tx *Transaction) TrimmedCopy() Transaction {
+	var inputs []TXInput
+	var outputs []TXOutput
+
+	for _, vin := range tx.Vin {
+		inputs = append(inputs,
+			TXInput{
+				Txid:      vin.Txid,
+				Vout:      vin.Vout,
+				Signature: cryptoKeys.Signature{Value: nil},
+				PubKey:    cryptoKeys.PublicKey{Key: nil},
+				ScriptSig: vin.ScriptSig})
+	}
+	for _, vout := range tx.Vout {
+		outputs = append(outputs, TXOutput{Value: vout.Value, ScriptPubKey: vout.ScriptPubKey})
+	}
+
+	txCopy := Transaction{ID: tx.ID, Vin: inputs, Vout: outputs, Value: tx.Value}
+
+	return txCopy
+}
+
+func (tx *Transaction) Hash() []byte {
+	txCopy := *tx
+	txCopy.ID = []byte{}
+	hash := sha256.Sum256(txCopy.Serialize())
+	return hash[:]
 }
