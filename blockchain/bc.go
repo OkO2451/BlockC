@@ -60,11 +60,25 @@ func NewBlockchain(address string) *bChain {
 }
 
 // add a new block to the bChain
+// AddBlock adds a new block to the blockchain with the given data and list of transactions.
+// It verifies each transaction before adding the block.
+// The lastHash parameter is the hash of the previous block in the blockchain.
+// This function updates the blockchain database with the new block and updates the blockchain's tip.
+// If an error occurs during the process, it will cause a panic.
 func (bc *bChain) AddBlock(data string, tr []*transactions.Transaction) {
+	// Print a message indicating that we are in the AddBlock function
 	fmt.Println("In AddBlock")
 
 	var lastHash []byte
 
+	// Verify each transaction before adding the block
+	for _, tx := range tr {
+		if !bc.VerifyTransaction(tx)  {
+			log.Panic("ERROR: Invalid transaction")
+		}
+	}
+
+	// Retrieve the last hash from the blockchain database
 	err := bc.Db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		lastHash = b.Get([]byte("l"))
@@ -75,8 +89,10 @@ func (bc *bChain) AddBlock(data string, tr []*transactions.Transaction) {
 		log.Panic(err)
 	}
 
+	// Create a new block with the given data, lastHash, and transactions
 	newBlock := NewBlock(data, lastHash, tr)
 
+	// Update the blockchain database with the new block
 	err = bc.Db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		err := b.Put(newBlock.Hash, newBlock.Serialize())
@@ -96,7 +112,6 @@ func (bc *bChain) AddBlock(data string, tr []*transactions.Transaction) {
 		log.Panic(err)
 	}
 }
-
 // very expensive operation to check if the bChain is valid
 func (bc *bChain) IsValid() bool {
 	it := bc.Iterator()
@@ -243,44 +258,20 @@ func (bc *bChain) FindUTXO(address string) []transactions.TXOutput {
 	return UTXOs
 }
 
-func NewUTXOTransaction(from, to string, amount int, bc *bChain) *transactions.Transaction {
-	var inputs []transactions.TXInput
-	var outputs []transactions.TXOutput
+func (w *wlt) GetTransactions() []string {
+	// consult the bChain for transactions
+	bc := NewBlockchain(w.Address.String())
+	defer bc.Db.Close()
 
-	acc, validOutputs := bc.FindSpendableOutputs(from, amount)
+	var transactions []string
 
-	if acc < amount {
-		fmt.Println("Error: Not enough funds")
-		return nil
+	unspentTransactions := bc.FindUnspentTransactions(w.Address.String())
+
+	for _, out := range unspentTransactions {
+		transactions = append(transactions, out.String())
 	}
 
-	for txid, outs := range validOutputs {
-		txID := []byte(txid)
-		for _, out := range outs {
-			input := transactions.TXInput{
-				Txid:      txID,
-				Vout:      out,
-				ScriptSig: from,
-			}
-			inputs = append(inputs, input)
-		}
-	}
-
-	outputs = append(outputs, *transactions.NewTXOutput(amount, to))
-	if acc > amount {
-		outputs = append(outputs, *transactions.NewTXOutput(acc-amount, from))
-	}
-
-	tx := transactions.Transaction{
-		ID:   nil,
-		Vin:  inputs,
-		Vout: outputs,
-
-		Value: amount,
-	}
-	tx.SetID()
-
-	return &tx
+	return transactions
 }
 
 func (bc *bChain) FindSpendableOutputs(address string, amount int) (int, map[string][]int) {

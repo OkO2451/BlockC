@@ -28,3 +28,7 @@ func (p PublicKey) Public() *PublicKey {
 func (p *PublicKey) Hash() []byte {
 	return p.Key
 }
+
+func (p *PublicKey) String() string {
+	return string(p.Key)
+}

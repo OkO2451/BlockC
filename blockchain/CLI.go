@@ -26,6 +26,17 @@ func (cli *CLI) printUsage() {
 	fmt.Println("  getbalance example: getbalance -address Ivan")
 }
 
+// Run executes the command-line interface (CLI) for the blockchain application.
+// It parses the command-line arguments and performs the corresponding actions based on the provided commands.
+func (cli *CLI) Run() {
+	// code here
+}
+
+// Run executes the command-line interface (CLI) for the blockchain application.
+// It parses the command-line arguments and performs the corresponding actions based on the provided commands.
+func (cli *CLI) Run() {
+	// code...
+}
 func (cli *CLI) Run() {
 	addBlockCmd := flag.NewFlagSet("addblock", flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
@@ -108,29 +119,32 @@ func (cli *CLI) printChain() {
 }
 
 func (cli *CLI) send(from, to string, amount int) {
-	bc := NewBlockchain(from)
+	bc := NewBlockchain()
+	UTXOSet := UTXOSet{bc}
 	defer bc.Db.Close()
-	data := fmt.Sprintf("Send %d BTC to %s", amount, to)
-	tx := NewUTXOTransaction(from, to, amount, bc)
+
+	tx := NewUTXOTransaction(from, to, amount, &UTXOSet)
 	if tx != nil {
-		bc.AddBlock(data, []*transactions.Transaction{tx})
+		cbTx := NewCoinbaseTX(from, "")
+		txs := []*transactions.Transaction{cbTx, tx}
+
+		bc.MineBlock(txs)
 		fmt.Println("Success!")
 	} else {
 		fmt.Println("Failed to send transaction")
 	}
 }
 
-
 func (cli *CLI) getBalance(address string) int {
-    bc := NewBlockchain(address)
-    defer bc.Db.Close()
+	bc := NewBlockchain(address)
+	defer bc.Db.Close()
 
-    balance := 0
-    UTXOs := bc.FindUTXO(address)
+	balance := 0
+	UTXOs := bc.FindUTXO(address)
 
-    for _, out := range UTXOs {
-        balance += out.Value
-    }
+	for _, out := range UTXOs {
+		balance += out.Value
+	}
 
-    return balance
+	return balance
 }
