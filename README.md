@@ -1,29 +1,32 @@
-# simple blockchain thingy
+# BlockC
 
-## testing
-go test -v -run TestPrepareData
-go test -v -run TestRun
+BlockC is a simple blockchain implementation in Go.
 
-## stuff to improve
+## Structure
 
-- links between blocks
-- use rest instead of cli
-- impliment mem pool
+The project is structured as follows:
 
+- `blockchain`: Contains the core blockchain implementation, including the blockchain itself (`bc.go`), blocks (`block.go`), and a command-line interface (`CLI.go`).
+- `cryptoKeys`: Contains the implementation for cryptographic keys and signatures.
+- `transactions`: Contains the implementation for transaction inputs (`input.go`), outputs (`output.go`), and transactions themselves (`trans.go`).
+- `wallet`: Contains the wallet implementation.
+- `Tests`: Contains unit tests for the blockchain.
+- `main.go`: The entry point of the application.
 
-## choice of the curve
+## Usage
 
-1.P-256 (also known as prime256v1 or secp256r1):
-This is part of the NIST (National Institute of Standards and Technology) suite of curves. It's widely used and supported, including in U.S. government systems. However, it has been criticized because its parameters were selected in a way that isn't fully transparent, leading to suspicions of a potential backdoor.
+To run the application, use the following command:
 
-2.secp256k1:
-This curve is used by Bitcoin and Ethereum for their public key cryptography. It's not widely used outside of blockchain technologies. Its main advantage is that it's slightly faster than P-256.
+```bash
+go run main.go
+```
 
-3.Curve25519: 
-This curve was designed by Daniel J. Bernstein with speed, security, and simplicity in mind. It's used in many modern protocols, including Signal and WireGuard. It's generally considered to be very secure and efficient.
+## Endpoints
+The application provides the following HTTP endpoints:
 
-4.Ed25519: 
-This is a specific implementation of EdDSA (Edwards-curve Digital Signature Algorithm) using the Curve25519. It's designed to be fast and to provide a high level of security, even against attackers with physical access to the hardware.
+POST /addblock: Adds a new block to the blockchain. The block data should be provided as a form value.
+GET /printchain: Returns the entire blockchain.
+GET /getbalance/:address: Returns the balance of the given address.
 
-5.P-384 and P-521: 
-These are also part of the NIST suite of curves. They provide a higher level of security than P-256, but they're slower and not as widely supported.
+## internal structure
+![alt text](image.png)

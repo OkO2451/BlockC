@@ -22,3 +22,15 @@
     └── main.go
 
 3 directories, 18 files
+
+When writing about this project in your CV, you should focus on the skills you used, the technologies you worked with, and the impact of the project. Here's an example:
+
+BlockC Blockchain Implementation
+Developed a simple blockchain application using Go, demonstrating proficiency in Go programming, data structures, and blockchain technology.
+Implemented core blockchain functionality, including the creation of blocks and transactions, and the calculation of balances.
+Built a command-line interface for interacting with the blockchain, showcasing my ability to create user-friendly interfaces.
+Used the Gin framework to provide a web interface for the blockchain, demonstrating my skills in web development and API design.
+Implemented cryptographic keys and signatures in the cryptoKeys package, showing my understanding of cryptography in the context of blockchain.
+Wrote unit tests for the blockchain, highlighting my commitment to code quality and testing.
+Managed the project using Git, showing my ability to use version control systems.
+Remember to tailor this to your own experience and the specific requirements of the jobs you're applying for. For example, if you're applying for a job that requires experience with blockchain technology, you might want to go into more detail about the blockchain aspects of the project.

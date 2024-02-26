@@ -15,7 +15,7 @@ const dbFile = "bc.db"
 const blocksBucket = "bChains"
 const genesisCoinbaseData = "banks are the modern day robber baron"
 
-type bChain struct {
+type BChain struct {
 	Tip []byte
 
 	Db *bolt.DB
@@ -28,8 +28,8 @@ type bcIterator struct {
 	Db          *bolt.DB
 }
 
-// create a new bChain
-func NewBlockchain(address string) *bChain {
+// create a new BChain
+func NewBlockchain(address string) *BChain {
 
 	var Tip []byte
 	Db, _ := bolt.Open(dbFile, 0600, nil)
@@ -51,7 +51,7 @@ func NewBlockchain(address string) *bChain {
 		return nil
 	})
 
-	bc := bChain{
+	bc := BChain{
 		Tip: Tip,
 		Db:  Db,
 	}
@@ -59,13 +59,13 @@ func NewBlockchain(address string) *bChain {
 	return &bc
 }
 
-// add a new block to the bChain
+// add a new block to the BChain
 // AddBlock adds a new block to the blockchain with the given data and list of transactions.
 // It verifies each transaction before adding the block.
 // The lastHash parameter is the hash of the previous block in the blockchain.
 // This function updates the blockchain database with the new block and updates the blockchain's tip.
 // If an error occurs during the process, it will cause a panic.
-func (bc *bChain) AddBlock(data string, tr []*transactions.Transaction) {
+func (bc *BChain) AddBlock(data string, tr []*transactions.Transaction) {
 	// Print a message indicating that we are in the AddBlock function
 	fmt.Println("In AddBlock")
 
@@ -112,8 +112,8 @@ func (bc *bChain) AddBlock(data string, tr []*transactions.Transaction) {
 		log.Panic(err)
 	}
 }
-// very expensive operation to check if the bChain is valid
-func (bc *bChain) IsValid() bool {
+// very expensive operation to check if the BChain is valid
+func (bc *BChain) IsValid() bool {
 	it := bc.Iterator()
 
 	for {
@@ -133,7 +133,7 @@ func (bc *bChain) IsValid() bool {
 }
 
 // create a new iterator
-func (bc *bChain) Iterator() *bcIterator {
+func (bc *BChain) Iterator() *bcIterator {
 	bci := &bcIterator{
 		currentHash: bc.Tip,
 		Db:          bc.Db,
@@ -166,15 +166,15 @@ func (i *bcIterator) Next() *Block {
 
 	return block
 }
-func PrintAllBlocks(bc *bChain) {
-	// Create a new bChain iterator
+func PrintAllBlocks(bc *BChain) {
+	// Create a new BChain iterator
 	it := bc.Iterator()
 
-	// Iterate over all blocks in the bChain
+	// Iterate over all blocks in the BChain
 	for {
 		block := it.Next()
 
-		// Break if there are no more blocks in the bChain
+		// Break if there are no more blocks in the BChain
 		if block == nil {
 			break
 		}
@@ -184,8 +184,8 @@ func PrintAllBlocks(bc *bChain) {
 	}
 }
 
-// add a private key to the bChain
-func (bc *bChain) AddPrivateKey(privateKey string) {
+// add a private key to the BChain
+func (bc *BChain) AddPrivateKey(privateKey string) {
 	err := bc.Db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		err := b.Put([]byte("privateKey"), []byte(privateKey))
@@ -196,7 +196,7 @@ func (bc *bChain) AddPrivateKey(privateKey string) {
 	}
 }
 
-func (bc *bChain) FindUnspentTransactions(address string) []transactions.Transaction {
+func (bc *BChain) FindUnspentTransactions(address string) []transactions.Transaction {
 	var unspentTXs []transactions.Transaction
 	spentTXOs := make(map[string][]int)
 	bci := bc.Iterator()
@@ -243,7 +243,7 @@ func (bc *bChain) FindUnspentTransactions(address string) []transactions.Transac
 	return unspentTXs
 }
 
-func (bc *bChain) FindUTXO(address string) []transactions.TXOutput {
+func (bc *BChain) FindUTXO(address string) []transactions.TXOutput {
 	var UTXOs []transactions.TXOutput
 	unspentTransactions := bc.FindUnspentTransactions(address)
 
@@ -259,7 +259,7 @@ func (bc *bChain) FindUTXO(address string) []transactions.TXOutput {
 }
 
 func (w *wlt) GetTransactions() []string {
-	// consult the bChain for transactions
+	// consult the BChain for transactions
 	bc := NewBlockchain(w.Address.String())
 	defer bc.Db.Close()
 
@@ -274,7 +274,7 @@ func (w *wlt) GetTransactions() []string {
 	return transactions
 }
 
-func (bc *bChain) FindSpendableOutputs(address string, amount int) (int, map[string][]int) {
+func (bc *BChain) FindSpendableOutputs(address string, amount int) (int, map[string][]int) {
 	unspentOutputs := make(map[string][]int)
 	unspentTXs := bc.FindUnspentTransactions(address)
 	accumulated := 0
@@ -298,7 +298,7 @@ Work:
 	return accumulated, unspentOutputs
 }
 
-func (bc *bChain) FindTransaction(ID []byte) (transactions.Transaction, error) {
+func (bc *BChain) FindTransaction(ID []byte) (transactions.Transaction, error) {
 	bci := bc.Iterator()
 
 	for {
@@ -318,7 +318,7 @@ func (bc *bChain) FindTransaction(ID []byte) (transactions.Transaction, error) {
 	return transactions.Transaction{}, nil
 }
 
-func (bc *bChain) SignTransaction(tx *transactions.Transaction, privKey cryptoKeys.PrivateKey) {
+func (bc *BChain) SignTransaction(tx *transactions.Transaction, privKey cryptoKeys.PrivateKey) {
 	prevTXs := make(map[string]transactions.Transaction)
 
 	for _, vin := range tx.Vin {
@@ -332,7 +332,7 @@ func (bc *bChain) SignTransaction(tx *transactions.Transaction, privKey cryptoKe
 	tx.Sign(privKey, prevTXs)
 }
 
-func (bc *bChain) VerifyTransaction(tx *transactions.Transaction) bool {
+func (bc *BChain) VerifyTransaction(tx *transactions.Transaction) bool {
 	if tx.IsCoinbase() {
 		return true
 	}

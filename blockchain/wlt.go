@@ -100,7 +100,7 @@ func (w *wlt) GetAddress() []byte {
 	return []byte(address)
 }
 
-func NewUTXOTransaction(from, to string, amount int, bc *bChain) *transactions.Transaction {
+func NewUTXOTransaction(from, to string, amount int, bc *BChain) *transactions.Transaction {
 	var inputs []transactions.TXInput
 	var outputs []transactions.TXOutput
 

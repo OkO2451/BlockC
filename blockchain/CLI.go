@@ -10,16 +10,16 @@ import (
 )
 
 type CLI struct {
-	Bc *bChain
+	Bc *BChain
 }
 
 func (cli *CLI) printUsage() {
 	fmt.Println("Usage:")
 
-	fmt.Println("  addblock -data BLOCK_DATA - add a block to the bChain")
+	fmt.Println("  addblock -data BLOCK_DATA - add a block to the BChain")
 	fmt.Println("  addblock example: addblock -data \"Send 1 BTC to Ivan\"")
 
-	fmt.Println("  printchain - print all the blocks of the bChain")
+	fmt.Println("  printchain - print all the blocks of the BChain")
 	fmt.Println("  printchain example: printchain")
 
 	fmt.Println("  getbalance -address ADDRESS - get balance for ADDRESS")
@@ -89,7 +89,7 @@ func (cli *CLI) Run() {
 	}
 }
 
-func NewCLI(Bc *bChain) *CLI {
+func NewCLI(Bc *BChain) *CLI {
 	return &CLI{Bc}
 }
 
@@ -120,15 +120,13 @@ func (cli *CLI) printChain() {
 
 func (cli *CLI) send(from, to string, amount int) {
 	bc := NewBlockchain()
-	UTXOSet := UTXOSet{bc}
 	defer bc.Db.Close()
 
-	tx := NewUTXOTransaction(from, to, amount, &UTXOSet)
+	tx := NewUTXOTransaction(from, to, amount , bc)
 	if tx != nil {
-		cbTx := NewCoinbaseTX(from, "")
-		txs := []*transactions.Transaction{cbTx, tx}
+		
 
-		bc.MineBlock(txs)
+		
 		fmt.Println("Success!")
 	} else {
 		fmt.Println("Failed to send transaction")
